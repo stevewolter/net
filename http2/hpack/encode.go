@@ -37,7 +37,7 @@ func NewEncoder(w io.Writer) *Encoder {
 	e := &Encoder{
 		minSize:         uint32Max,
 		maxSizeLimit:    initialHeaderTableSize,
-		tableSizeUpdate: false,
+		tableSizeUpdate: true,
 		w:               w,
 	}
 	e.dynTab.table.init()
@@ -96,11 +96,13 @@ func (e *Encoder) WriteField(f HeaderField) error {
 func (e *Encoder) searchTable(f HeaderField) (i uint64, nameValueMatch bool) {
 	i, nameValueMatch = staticTable.search(f)
 	if nameValueMatch {
+		log.Printf("Got static match for %v", f)
 		return i, true
 	}
 
 	j, nameValueMatch := e.dynTab.table.search(f)
 	if nameValueMatch || (i == 0 && j != 0) {
+		log.Printf("Got dynamic match for %v", f)
 		return j + uint64(staticTable.len()), nameValueMatch
 	}
 
