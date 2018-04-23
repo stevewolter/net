@@ -6,6 +6,7 @@ package hpack
 
 import (
 	"io"
+	"log"
 )
 
 const (
@@ -48,6 +49,7 @@ func NewEncoder(w io.Writer) *Encoder {
 // This function may also produce bytes for "Header Table Size Update"
 // if necessary. If produced, it is done before encoding f.
 func (e *Encoder) WriteField(f HeaderField) error {
+	log.Printf("Writing header field %v", f)
 	e.buf = e.buf[:0]
 
 	if e.tableSizeUpdate {
@@ -61,10 +63,13 @@ func (e *Encoder) WriteField(f HeaderField) error {
 
 	idx, nameValueMatch := e.searchTable(f)
 	if nameValueMatch {
+		log.Printf("Got name/value match %i", idx)
 		e.buf = appendIndexed(e.buf, idx)
 	} else {
+		log.Printf("No name/value match on %i", idx)
 		indexing := e.shouldIndex(f)
 		if indexing {
+			log.Printf("Adding to dynamic table")
 			e.dynTab.add(f)
 		}
 
