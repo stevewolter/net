@@ -6,11 +6,11 @@ package hpack
 
 import (
 	"io"
-	"log"
 )
 
 const (
-	uint32Max              = ^uint32(0)
+	uint32Max = ^uint32(0)
+	// disable dynamic indexing because nginx doesn't support it
 	initialHeaderTableSize = 0
 )
 
@@ -37,7 +37,7 @@ func NewEncoder(w io.Writer) *Encoder {
 	e := &Encoder{
 		minSize:         uint32Max,
 		maxSizeLimit:    initialHeaderTableSize,
-		tableSizeUpdate: true,
+		tableSizeUpdate: false,
 		w:               w,
 	}
 	e.dynTab.table.init()
@@ -49,7 +49,6 @@ func NewEncoder(w io.Writer) *Encoder {
 // This function may also produce bytes for "Header Table Size Update"
 // if necessary. If produced, it is done before encoding f.
 func (e *Encoder) WriteField(f HeaderField) error {
-	log.Printf("Writing header field %v", f)
 	e.buf = e.buf[:0]
 
 	if e.tableSizeUpdate {
@@ -63,13 +62,10 @@ func (e *Encoder) WriteField(f HeaderField) error {
 
 	idx, nameValueMatch := e.searchTable(f)
 	if nameValueMatch {
-		log.Printf("Got name/value match %i", idx)
 		e.buf = appendIndexed(e.buf, idx)
 	} else {
-		log.Printf("No name/value match on %i", idx)
 		indexing := e.shouldIndex(f)
 		if indexing {
-			log.Printf("Adding to dynamic table")
 			e.dynTab.add(f)
 		}
 
@@ -96,13 +92,11 @@ func (e *Encoder) WriteField(f HeaderField) error {
 func (e *Encoder) searchTable(f HeaderField) (i uint64, nameValueMatch bool) {
 	i, nameValueMatch = staticTable.search(f)
 	if nameValueMatch {
-		log.Printf("Got static match for %v", f)
 		return i, true
 	}
 
 	j, nameValueMatch := e.dynTab.table.search(f)
 	if nameValueMatch || (i == 0 && j != 0) {
-		log.Printf("Got dynamic match for %v", f)
 		return j + uint64(staticTable.len()), nameValueMatch
 	}
 
